@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-20 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-[#E7E5E4] px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Brand */}
-        <div className="flex items-center gap-3">
+        <div data-testid="header-brand" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-sm font-bold text-lg">
             <Sparkles className="w-5 h-5" />
           </div>

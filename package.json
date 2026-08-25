@@ -24,7 +24,7 @@
     "test:unit": "vitest run --selectProjects unit",
     "test:integration": "vitest run --selectProjects integration",
     "test:compose": "tsx scripts/test-compose-pipeline.ts",
-    "test:e2e": "npm run test:compose && playwright test",
+    "test:e2e": "npm run build && npm run test:compose && tsx scripts/run-e2e.ts",
     "db:migrate": "npm run db:migrate --workspace=@ai-knowledge-inbox/db"
   },
   "devDependencies": {
