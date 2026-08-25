@@ -127,4 +127,47 @@ describe('RAG Query Pipeline Integration Tests', () => {
       .send({ question: 'a'.repeat(2001) })
       .expect(400);
   });
+
+  it('strictly validates citation schema, allowlist, duplicates, and tag agreement', () => {
+    const allowlisted = new Set(['S1', 'S2']);
+
+    // 1. Valid response
+    const validRes = queryService.validateModelResponse(
+      JSON.stringify({ answer: 'Here is information [S1] and [S2].', citations: ['S1', 'S2'] }),
+      allowlisted
+    );
+    expect(validRes.valid).toBe(true);
+
+    // 2. Unknown citation in array
+    const unknownArr = queryService.validateModelResponse(
+      JSON.stringify({ answer: 'Info [S1].', citations: ['S1', 'S99'] }),
+      allowlisted
+    );
+    expect(unknownArr.valid).toBe(false);
+    if (!unknownArr.valid) expect(unknownArr.reason).toContain('Unknown citation ID "S99"');
+
+    // 3. Unknown citation in text tags
+    const unknownTag = queryService.validateModelResponse(
+      JSON.stringify({ answer: 'Info [S99].', citations: ['S1'] }),
+      allowlisted
+    );
+    expect(unknownTag.valid).toBe(false);
+    if (!unknownTag.valid) expect(unknownTag.reason).toContain('Unknown citation ID "S99"');
+
+    // 4. Duplicate citation in array
+    const duplicateArr = queryService.validateModelResponse(
+      JSON.stringify({ answer: 'Info [S1].', citations: ['S1', 'S1'] }),
+      allowlisted
+    );
+    expect(duplicateArr.valid).toBe(false);
+    if (!duplicateArr.valid) expect(duplicateArr.reason).toContain('Duplicate citation ID');
+
+    // 5. Disagreement between tags and array
+    const disagreement = queryService.validateModelResponse(
+      JSON.stringify({ answer: 'Info [S1].', citations: ['S1', 'S2'] }),
+      allowlisted
+    );
+    expect(disagreement.valid).toBe(false);
+    if (!disagreement.valid) expect(disagreement.reason).toContain('Disagreement between citations array count');
+  });
 });

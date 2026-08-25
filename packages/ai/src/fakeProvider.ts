@@ -25,7 +25,7 @@ export function createDeterministicVector(text: string, dimensions = 1536): numb
   return vector.map((v) => v / norm);
 }
 
-export async function startFakeAIServer(): Promise<FakeProviderServer> {
+export async function startFakeAIServer(targetPort = 0): Promise<FakeProviderServer> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       let body = '';
@@ -120,7 +120,7 @@ export async function startFakeAIServer(): Promise<FakeProviderServer> {
       });
     });
 
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(targetPort, '0.0.0.0', () => {
       const addr = server.address();
       const port = typeof addr === 'object' && addr ? addr.port : 0;
       const baseUrl = `http://127.0.0.1:${port}/v1`;

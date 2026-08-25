@@ -32,10 +32,10 @@ export const AskQuestion: React.FC<AskQuestionProps> = ({ onSelectCitationItem }
   };
 
   return (
-    <section className="max-w-4xl mx-auto my-8 px-4">
-      <div className="bg-gradient-to-b from-amber-500/10 via-white to-white border border-amber-500/30 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4 text-amber-900 font-bold text-lg">
-          <Sparkles className="w-5 h-5 text-amber-600" />
+    <section className="max-w-4xl mx-auto my-6 sm:my-8 px-2 sm:px-4">
+      <div className="bg-gradient-to-b from-amber-500/10 via-white to-white border border-amber-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4 text-amber-900 font-bold text-base sm:text-lg">
+          <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
           <h2>Ask RAG Assistant over Saved Inbox</h2>
         </div>
 
@@ -88,10 +88,11 @@ export const AskQuestion: React.FC<AskQuestionProps> = ({ onSelectCitationItem }
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {result.sources.map((src: CitationSource) => (
-                    <div
+                    <button
                       key={src.citationId}
+                      type="button"
                       onClick={() => onSelectCitationItem(src.itemId)}
-                      className="p-3 bg-stone-50 hover:bg-amber-50/60 border border-stone-200 hover:border-amber-300 rounded-xl cursor-pointer transition-all text-xs group"
+                      className="text-left w-full p-3 bg-stone-50 hover:bg-amber-50/60 focus:bg-amber-50/60 border border-stone-200 hover:border-amber-300 focus:border-amber-400 rounded-xl cursor-pointer transition-all text-xs group focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded text-[10px]">
@@ -107,7 +108,7 @@ export const AskQuestion: React.FC<AskQuestionProps> = ({ onSelectCitationItem }
                       <p className="text-stone-600 line-clamp-2 text-[11px] leading-normal italic">
                         "{src.snippet}"
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>

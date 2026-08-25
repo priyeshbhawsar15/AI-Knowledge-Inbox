@@ -32,6 +32,14 @@ const vectorIndex = new VectorIndex({
   logger,
 });
 
+// Load vector index at API startup (builds valid snapshot, including empty if 0 ready chunks)
+try {
+  vectorIndex.reload(repository);
+  logger.info({ count: vectorIndex.getCount() }, 'Vector index loaded at API startup');
+} catch (err: unknown) {
+  logger.warn({ err }, 'Vector index startup reload warning (will retry on readiness/query)');
+}
+
 const queryService = new QueryService({
   config,
   logger,
@@ -40,7 +48,7 @@ const queryService = new QueryService({
   vectorIndex,
 });
 
-const app = createApp({ config, logger, repository, queryService });
+const app = createApp({ config, logger, repository, vectorIndex, queryService });
 
 const server = app.listen(config.PORT, '0.0.0.0', () => {
   logger.info({ port: config.PORT }, 'API server listening');

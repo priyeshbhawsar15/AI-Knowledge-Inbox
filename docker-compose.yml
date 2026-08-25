@@ -14,7 +14,7 @@ services:
       - DATABASE_PATH=/data/knowledge.db
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - AI_BASE_URL=${AI_BASE_URL:-https://api.openai.com/v1}
-      - AI_API_KEY=${AI_API_KEY:-sk-placeholder-do-not-use}
+      - AI_API_KEY=${AI_API_KEY:-}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
       - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
       - CHAT_MODEL=${CHAT_MODEL:-gpt-4o-mini}
@@ -39,7 +39,7 @@ services:
       - DATABASE_PATH=/data/knowledge.db
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - AI_BASE_URL=${AI_BASE_URL:-https://api.openai.com/v1}
-      - AI_API_KEY=${AI_API_KEY:-sk-placeholder-do-not-use}
+      - AI_API_KEY=${AI_API_KEY:-}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
       - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
       - CHAT_MODEL=${CHAT_MODEL:-gpt-4o-mini}

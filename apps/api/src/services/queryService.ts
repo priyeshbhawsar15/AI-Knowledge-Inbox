@@ -13,6 +13,15 @@ export interface QueryServiceOptions {
   vectorIndex: VectorIndex;
 }
 
+export interface ParsedChatResponse {
+  answer: string;
+  citations: string[];
+}
+
+export type ValidationResult =
+  | { valid: true; parsed: ParsedChatResponse }
+  | { valid: false; reason: string };
+
 export class QueryService {
   constructor(private readonly options: QueryServiceOptions) {}
 
@@ -55,11 +64,11 @@ export class QueryService {
     let queryVectors: number[][];
     try {
       queryVectors = await aiClient.generateEmbeddings([question]);
-    } catch (err: unknown) {
+    } catch {
       const providerErr: AppError = new Error('AI provider error during embedding generation');
       providerErr.code = 'AI_PROVIDER_ERROR';
       providerErr.statusCode = 502;
-      providerErr.details = { originalError: err instanceof Error ? err.message : String(err) };
+      providerErr.details = {};
       throw providerErr;
     }
 
@@ -68,6 +77,7 @@ export class QueryService {
       const providerErr: AppError = new Error('AI provider returned empty query vector');
       providerErr.code = 'AI_PROVIDER_ERROR';
       providerErr.statusCode = 502;
+      providerErr.details = {};
       throw providerErr;
     }
 
@@ -76,7 +86,7 @@ export class QueryService {
 
     // Insufficient context
     if (searchResults.length === 0) {
-      logger.info({ question }, 'No relevant chunks found above min relevance score');
+      logger.info({ questionLength: question.length, topK }, 'No relevant chunks found above min relevance score');
       return {
         answer: "I don't have enough relevant saved information to answer your question.",
         sources: [],
@@ -87,9 +97,12 @@ export class QueryService {
     // 4. Build cited sources mapping S1..Sn
     const sourceMap = new Map<string, CitationSource>();
     const contextBlocks: string[] = [];
+    const allowlistedIds = new Set<string>();
 
     searchResults.forEach((res, idx) => {
       const citationId = `S${idx + 1}`;
+      allowlistedIds.add(citationId);
+
       const sourceObj: CitationSource = {
         citationId,
         itemId: res.itemId,
@@ -123,79 +136,135 @@ Respond ONLY with a valid JSON object matching this schema:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ]);
-    } catch (err: unknown) {
+    } catch {
       const providerErr: AppError = new Error('AI provider error during chat generation');
       providerErr.code = 'AI_PROVIDER_ERROR';
       providerErr.statusCode = 502;
-      providerErr.details = { originalError: err instanceof Error ? err.message : String(err) };
+      providerErr.details = {};
       throw providerErr;
     }
 
-    let parsed = this.parseChatResponse(responseText);
+    let val = this.validateModelResponse(responseText, allowlistedIds);
 
-    if (!parsed) {
-      logger.warn('Initial chat response was not valid JSON, running corrective retry');
+    if (!val.valid) {
+      logger.warn({ reason: val.reason }, 'Initial chat response failed citation validation, running corrective retry');
       try {
         const retryText = await aiClient.generateChatCompletion([
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
-          { role: 'user', content: 'Your previous response was not valid JSON. Please output strictly valid JSON.' },
+          {
+            role: 'user',
+            content: `Your previous response was invalid: ${val.reason}. Please output strictly valid JSON matching {"answer": "...", "citations": ["S1", ...]} using ONLY allowlisted citations from the provided sources. Match citations in both answer tags and the citations array.`,
+          },
         ]);
-        parsed = this.parseChatResponse(retryText);
+        val = this.validateModelResponse(retryText, allowlistedIds);
       } catch {
-        // Fallback or fail
+        // Fall through to check val
       }
     }
 
-    if (!parsed) {
-      const invalidResponseErr: AppError = new Error('AI chat provider returned malformed structured response');
+    if (!val.valid) {
+      logger.error({ reason: val.reason }, 'Model response failed citation validation after corrective retry');
+      const invalidResponseErr: AppError = new Error('AI chat provider returned malformed structured response or invalid citations');
       invalidResponseErr.code = 'AI_INVALID_RESPONSE';
       invalidResponseErr.statusCode = 502;
+      invalidResponseErr.details = {};
       throw invalidResponseErr;
     }
 
-    // 6. Filter cited sources to valid IDs present in answer or citations list
-    const usedCitations = new Set<string>();
-    if (parsed.citations) {
-      parsed.citations.forEach((c) => {
-        if (sourceMap.has(c)) usedCitations.add(c);
-      });
-    }
-
-    // Scan answer text for tags like [S1]
-    const matches = parsed.answer.match(/\[S\d+\]/g) || [];
-    for (const match of matches) {
-      const id = match.replace('[', '').replace(']', '');
-      if (sourceMap.has(id)) {
-        usedCitations.add(id);
-      }
-    }
+    const { answer, citations } = val.parsed;
 
     const finalSources: CitationSource[] = [];
-    for (const id of usedCitations) {
+    for (const id of citations) {
       const src = sourceMap.get(id);
       if (src) finalSources.push(src);
     }
 
     return {
-      answer: parsed.answer,
+      answer,
       sources: finalSources,
       requestId: requestId ?? '',
     };
   }
 
-  private parseChatResponse(text: string): { answer: string; citations?: string[] } | null {
+  public validateModelResponse(text: string, allowlistedIds: Set<string>): ValidationResult {
+    let obj: unknown;
     try {
-      const obj = JSON.parse(text);
-      if (typeof obj === 'object' && obj !== null && typeof obj.answer === 'string') {
-        const citations = Array.isArray(obj.citations)
-          ? obj.citations.filter((c: unknown) => typeof c === 'string')
-          : undefined;
-        return { answer: obj.answer, citations };
-      }
-      return null;
+      obj = JSON.parse(text);
     } catch {
-      return null;
+      return { valid: false, reason: 'Response is not valid JSON' };
     }
+
+    if (typeof obj !== 'object' || obj === null) {
+      return { valid: false, reason: 'Response root is not an object' };
+    }
+
+    const rec = obj as Record<string, unknown>;
+    if (typeof rec['answer'] !== 'string') {
+      return { valid: false, reason: 'Property "answer" must be a string' };
+    }
+
+    if (!Array.isArray(rec['citations'])) {
+      return { valid: false, reason: 'Property "citations" must be an array' };
+    }
+
+    const citationsArr: string[] = [];
+    const seenCitations = new Set<string>();
+
+    for (const item of rec['citations']) {
+      if (typeof item !== 'string') {
+        return { valid: false, reason: 'Citations array must contain strings' };
+      }
+      if (seenCitations.has(item)) {
+        return { valid: false, reason: `Duplicate citation ID "${item}" in citations array` };
+      }
+      seenCitations.add(item);
+      citationsArr.push(item);
+    }
+
+    // Verify all citation IDs in array exist in allowlist
+    for (const id of citationsArr) {
+      if (!allowlistedIds.has(id)) {
+        return { valid: false, reason: `Unknown citation ID "${id}" in citations array` };
+      }
+    }
+
+    // Extract tags from answer text
+    const answerText = rec['answer'];
+    const tagMatches = answerText.match(/\[S\d+\]/g) || [];
+    const answerTagSet = new Set<string>();
+
+    for (const match of tagMatches) {
+      const id = match.substring(1, match.length - 1);
+      if (!allowlistedIds.has(id)) {
+        return { valid: false, reason: `Unknown citation ID "${id}" in answer text tags` };
+      }
+      answerTagSet.add(id);
+    }
+
+    // Check agreement between answer tags and citations array
+    if (citationsArr.length !== answerTagSet.size) {
+      return {
+        valid: false,
+        reason: `Disagreement between citations array count (${citationsArr.length}) and answer tag count (${answerTagSet.size})`,
+      };
+    }
+
+    for (const id of citationsArr) {
+      if (!answerTagSet.has(id)) {
+        return {
+          valid: false,
+          reason: `Citation ID "${id}" in citations array is missing from answer text tags`,
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      parsed: {
+        answer: answerText,
+        citations: citationsArr,
+      },
+    };
   }
 }

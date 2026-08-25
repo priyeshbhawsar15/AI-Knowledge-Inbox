@@ -15,10 +15,13 @@ import type { QueryService } from './services/queryService.js';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { VectorIndex } from '@ai-knowledge-inbox/ai';
+
 export interface AppDependencies {
   config: Config;
   logger: Logger;
   repository: Repository;
+  vectorIndex?: VectorIndex | undefined;
   queryService?: QueryService | undefined;
   queryHandler?: express.RequestHandler | undefined;
 }
@@ -55,11 +58,12 @@ export function createApp(deps: AppDependencies): Express {
     const start = Date.now();
     res.on('finish', () => {
       const durationMs = Date.now() - start;
+      const reqPath = req.baseUrl ? req.baseUrl + req.path : req.path;
       logger.info(
         {
           requestId: req.id,
           method: req.method,
-          url: req.originalUrl,
+          path: reqPath,
           status: res.statusCode,
           durationMs,
         },
@@ -70,7 +74,14 @@ export function createApp(deps: AppDependencies): Express {
   });
 
   // Health routes
-  app.use('/health', createHealthRouter(repository));
+  app.use(
+    '/health',
+    createHealthRouter({
+      repository,
+      vectorIndex: deps.vectorIndex,
+      config: deps.config,
+    })
+  );
 
   // Ingest route with rate limit
   const ingestLimiter = createIngestRateLimiter(deps.config.INGEST_RATE_LIMIT_PER_MIN);

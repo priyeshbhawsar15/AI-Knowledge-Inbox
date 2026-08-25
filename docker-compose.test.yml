@@ -1,0 +1,58 @@
+name: ai-knowledge-inbox-test
+
+services:
+  fake-services:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npx tsx tests/fixtures/startTestServices.ts
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node apps/api/dist/index.js
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=test
+      - DATABASE_PATH=/data/knowledge.db
+      - LOG_LEVEL=info
+      - AI_BASE_URL=http://fake-services:8080/v1
+      - AI_API_KEY=test-fake-key
+      - EMBEDDING_MODEL=text-embedding-3-small
+      - EMBEDDING_DIMENSIONS=1536
+      - CHAT_MODEL=gpt-4o-mini
+      - MIN_RELEVANCE_SCORE=0.0
+    volumes:
+      - knowledge-test-data:/data
+    depends_on:
+      - fake-services
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node apps/worker/dist/index.js
+    environment:
+      - NODE_ENV=test
+      - DATABASE_PATH=/data/knowledge.db
+      - LOG_LEVEL=info
+      - AI_BASE_URL=http://fake-services:8080/v1
+      - AI_API_KEY=test-fake-key
+      - EMBEDDING_MODEL=text-embedding-3-small
+      - EMBEDDING_DIMENSIONS=1536
+      - CHAT_MODEL=gpt-4o-mini
+    volumes:
+      - knowledge-test-data:/data
+    depends_on:
+      - fake-services
+      - api
+
+volumes:
+  knowledge-test-data:
+    driver: local

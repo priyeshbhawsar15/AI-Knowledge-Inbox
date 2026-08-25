@@ -23,10 +23,19 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ itemSummary, o
         .then(setDetail)
         .catch(() => setDetail(null))
         .finally(() => setLoading(false));
+
+      setTimeout(() => {
+        const firstBtn = modalRef.current?.querySelector('button') as HTMLElement;
+        if (firstBtn) {
+          firstBtn.focus();
+        } else {
+          modalRef.current?.focus();
+        }
+      }, 50);
     }
 
     return () => {
-      if (previousFocusRef.current) {
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
         previousFocusRef.current.focus();
       }
     };
@@ -34,13 +43,42 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({ itemSummary, o
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!itemSummary) return;
+
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusables = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => !el.hasAttribute('disabled'));
+
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || !modalRef.current.contains(document.activeElement)) {
+            e.preventDefault();
+            last?.focus();
+          }
+        } else {
+          if (document.activeElement === last || !modalRef.current.contains(document.activeElement)) {
+            e.preventDefault();
+            first?.focus();
+          }
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [itemSummary, onClose]);
 
   if (!itemSummary) return null;
 

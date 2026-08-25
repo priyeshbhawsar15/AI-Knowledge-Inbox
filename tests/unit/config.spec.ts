@@ -18,4 +18,21 @@ describe('Config Validation', () => {
   it('throws error for invalid config value', () => {
     expect(() => loadConfig({ PORT: 'invalid-port' })).toThrow();
   });
+
+  it('rejects placeholder or missing AI_API_KEY in production mode', () => {
+    expect(() => loadConfig({ NODE_ENV: 'production', AI_API_KEY: '' })).toThrow(
+      /AI_API_KEY is required in production mode/
+    );
+    expect(() =>
+      loadConfig({ NODE_ENV: 'production', AI_API_KEY: 'sk-placeholder-do-not-use' })
+    ).toThrow(/AI_API_KEY cannot be a placeholder/);
+    expect(() =>
+      loadConfig({ NODE_ENV: 'production', AI_API_KEY: 'YOUR_API_KEY' })
+    ).toThrow(/AI_API_KEY cannot be a placeholder/);
+  });
+
+  it('accepts valid non-placeholder AI_API_KEY in production mode', () => {
+    const config = loadConfig({ NODE_ENV: 'production', AI_API_KEY: 'sk-proj-actual-prod-key-999' });
+    expect(config.AI_API_KEY).toBe('sk-proj-actual-prod-key-999');
+  });
 });

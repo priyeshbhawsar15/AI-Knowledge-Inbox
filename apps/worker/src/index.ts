@@ -32,6 +32,7 @@ const runner = new WorkerRunner({
   repository,
   embeddingProvider: aiClient,
   logger,
+  allowLocalhostInTests: config.NODE_ENV === 'test',
 });
 
 runner.start().catch((err) => {

@@ -27,6 +27,21 @@ export class WorkerRunner {
   constructor(private readonly options: WorkerRunnerOptions) {}
 
   public async start(): Promise<void> {
+    const sysState = this.options.repository.getSystemState();
+    if (!sysState) {
+      throw new Error('Worker startup failed: Database system_state is uninitialized.');
+    }
+
+    const modelInfo = this.options.embeddingProvider.getModelInfo();
+    if (
+      sysState.embeddingModel !== modelInfo.model ||
+      sysState.embeddingDimensions !== modelInfo.dimensions
+    ) {
+      throw new Error(
+        `INDEX_MODEL_MISMATCH: Worker configured embedding model (${modelInfo.model}/${modelInfo.dimensions}) does not match DB system_state (${sysState.embeddingModel}/${sysState.embeddingDimensions})`
+      );
+    }
+
     this.isRunning = true;
     this.options.logger.info({ workerId: this.options.workerId }, 'Worker runner started');
 

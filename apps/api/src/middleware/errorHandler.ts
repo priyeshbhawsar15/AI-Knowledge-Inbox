@@ -46,14 +46,16 @@ export function createErrorHandler(logger: Logger) {
       statusCode = 502;
     }
 
+    const reqPath = req.baseUrl ? req.baseUrl + req.path : req.path;
+
     if (statusCode >= 500) {
-      logger.error({ err, requestId, url: req.originalUrl }, 'Unhandled application error');
+      logger.error({ err, requestId, path: reqPath }, 'Unhandled application error');
       if (process.env['NODE_ENV'] === 'production') {
         message = 'An unexpected internal server error occurred.';
         details = {};
       }
     } else {
-      logger.warn({ code, statusCode, requestId, url: req.originalUrl, message }, 'Application client error');
+      logger.warn({ code, statusCode, requestId, path: reqPath, message }, 'Application client error');
     }
 
     const safeError: SafeError = {

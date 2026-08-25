@@ -139,7 +139,17 @@ describe('Express Ingest & Item API Integration Tests', () => {
 
   it('GET /health/live and /health/ready return health responses', async () => {
     await request(app).get('/health/live').expect(200);
+
+    // /health/ready returns 503 if worker heartbeat is missing
+    const unready = await request(app).get('/health/ready').expect(503);
+    expect(unready.body.status).toBe('unavailable');
+
+    // Upsert worker state to simulate active worker
+    repo.upsertWorkerState('w-test', '1.0.0');
+
     const ready = await request(app).get('/health/ready').expect(200);
     expect(ready.body.status).toBe('ok');
+    expect(ready.body.checks.database.status).toBe('ok');
+    expect(ready.body.checks.worker.status).toBe('ok');
   });
 });

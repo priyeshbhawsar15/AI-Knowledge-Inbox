@@ -84,42 +84,47 @@ export async function validateUrlAndResolveIp(
     throw new Error('URL_POLICY_VIOLATION: Credentials in URL are forbidden');
   }
 
+  const isTestMode = options?.allowLocalhostInTests === true && process.env.NODE_ENV === 'test';
+
   const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
   // Standard ports allowed unless test mode explicitly overrides
-  if (!options?.allowLocalhostInTests && port !== 80 && port !== 443) {
+  if (!isTestMode && port !== 80 && port !== 443) {
     throw new Error(`URL_POLICY_VIOLATION: Non-standard port ${port} is forbidden`);
   }
 
   const hostname = url.hostname.toLowerCase();
-  if (!options?.allowLocalhostInTests) {
+  if (!isTestMode) {
     if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
       throw new Error('URL_PRIVATE_ADDRESS: Localhost target forbidden');
     }
   }
 
-  let ip: string;
+  let resolvedIp: string;
   if (isIP(hostname)) {
-    ip = hostname;
+    resolvedIp = hostname;
+    if (!isTestMode && isPrivateOrReservedIp(resolvedIp)) {
+      throw new Error(`URL_PRIVATE_ADDRESS: Destination IP ${resolvedIp} is in a private/reserved range`);
+    }
   } else {
     try {
       const addresses = await lookup(hostname, { all: true });
       if (!addresses || addresses.length === 0) {
         throw new Error('URL_FETCH_FAILED: DNS resolution failed');
       }
-      const first = addresses[0];
-      if (!first) {
-        throw new Error('URL_FETCH_FAILED: DNS resolution failed');
+
+      // Validate EVERY resolved address
+      for (const addr of addresses) {
+        if (!isTestMode && isPrivateOrReservedIp(addr.address)) {
+          throw new Error(`URL_PRIVATE_ADDRESS: Destination IP ${addr.address} is in a private/reserved range`);
+        }
       }
-      ip = first.address;
+
+      resolvedIp = addresses[0]!.address;
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith('URL_')) throw err;
       throw new Error(`URL_FETCH_FAILED: Could not resolve domain ${hostname}`);
     }
   }
 
-  if (!options?.allowLocalhostInTests && isPrivateOrReservedIp(ip)) {
-    throw new Error(`URL_PRIVATE_ADDRESS: Destination IP ${ip} is in a private/reserved range`);
-  }
-
-  return { url, resolvedIp: ip };
+  return { url, resolvedIp };
 }

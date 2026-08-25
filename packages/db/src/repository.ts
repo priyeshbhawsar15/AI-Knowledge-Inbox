@@ -601,6 +601,15 @@ export class Repository {
     return rows;
   }
 
+  public getLatestWorkerState(): typeof workerState.$inferSelect | undefined {
+    return this.db
+      .select()
+      .from(workerState)
+      .orderBy(desc(workerState.heartbeatAt))
+      .limit(1)
+      .get();
+  }
+
   public getSystemState(): typeof systemState.$inferSelect | undefined {
     return this.db.select().from(systemState).where(eq(systemState.id, 1)).get();
   }
