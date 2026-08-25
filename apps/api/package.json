@@ -1,0 +1,31 @@
+{
+  "name": "@ai-knowledge-inbox/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@ai-knowledge-inbox/ai": "*",
+    "@ai-knowledge-inbox/config": "*",
+    "@ai-knowledge-inbox/contracts": "*",
+    "@ai-knowledge-inbox/db": "*",
+    "@ai-knowledge-inbox/domain": "*",
+    "@ai-knowledge-inbox/observability": "*",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}

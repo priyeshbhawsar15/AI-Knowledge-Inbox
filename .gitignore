@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+*.tsbuildinfo
+
+# Database & Runtime Data
+*.db
+*.db-wal
+*.db-shm
+/data/
+/tests/fixtures/*.db
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Testing & Coverage
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,51 @@
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Copy package manifests
+COPY package.json tsconfig.base.json ./
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/config/package.json ./packages/config/
+COPY packages/domain/package.json ./packages/domain/
+COPY packages/observability/package.json ./packages/observability/
+COPY packages/db/package.json ./packages/db/
+COPY packages/ingestion/package.json ./packages/ingestion/
+COPY packages/ai/package.json ./packages/ai/
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
+COPY apps/web/package.json ./apps/web/
+
+# Install dependencies and build tools
+RUN apk add --no-cache python3 make g++ \
+  && npm install-scripts approve better-sqlite3 esbuild || true \
+  && npm install
+
+# Copy source files
+COPY packages/ ./packages/
+COPY apps/ ./apps/
+
+# Build all packages and applications
+RUN npm run build
+
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+# Install runtime dependencies for better-sqlite3
+RUN apk add --no-cache sqlite-dev
+
+# Copy built workspace from builder
+COPY --from=builder /app ./
+
+# Create data directory with permissions for non-root user
+RUN mkdir -p /data && chown -R node:node /app /data
+
+USER node
+
+EXPOSE 3000
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    DATABASE_PATH=/data/knowledge.db
+
+CMD ["node", "apps/api/dist/index.js"]

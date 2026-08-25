@@ -1,0 +1,26 @@
+{
+  "name": "@ai-knowledge-inbox/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@ai-knowledge-inbox/ai": "*",
+    "@ai-knowledge-inbox/config": "*",
+    "@ai-knowledge-inbox/contracts": "*",
+    "@ai-knowledge-inbox/db": "*",
+    "@ai-knowledge-inbox/domain": "*",
+    "@ai-knowledge-inbox/ingestion": "*",
+    "@ai-knowledge-inbox/observability": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}

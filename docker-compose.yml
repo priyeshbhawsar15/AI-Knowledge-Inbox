@@ -1,0 +1,52 @@
+name: ai-knowledge-inbox
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node apps/api/dist/index.js
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_PATH=/data/knowledge.db
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - AI_BASE_URL=${AI_BASE_URL:-https://api.openai.com/v1}
+      - AI_API_KEY=${AI_API_KEY:-sk-placeholder-do-not-use}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
+      - CHAT_MODEL=${CHAT_MODEL:-gpt-4o-mini}
+      - MIN_RELEVANCE_SCORE=${MIN_RELEVANCE_SCORE:-0.3}
+    volumes:
+      - knowledge-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/live').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node apps/worker/dist/index.js
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/data/knowledge.db
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - AI_BASE_URL=${AI_BASE_URL:-https://api.openai.com/v1}
+      - AI_API_KEY=${AI_API_KEY:-sk-placeholder-do-not-use}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1536}
+      - CHAT_MODEL=${CHAT_MODEL:-gpt-4o-mini}
+    volumes:
+      - knowledge-data:/data
+    restart: unless-stopped
+
+volumes:
+  knowledge-data:
+    driver: local
