@@ -1,13 +1,11 @@
 import { createServer } from 'node:http';
-import { startFakeAIServer, OpenAIClient } from '@ai-knowledge-inbox/ai';
-import { createDatabase, migrateDatabase, Repository } from '@ai-knowledge-inbox/db';
+import { startFakeAIServer } from '@ai-knowledge-inbox/ai';
 import { createLogger } from '@ai-knowledge-inbox/observability';
-import { WorkerRunner } from '../../apps/worker/src/runner.js';
 
 process.env.NODE_ENV = 'test';
 
 async function main() {
-  const logger = createLogger({ name: 'test-fixtures', level: 'info' });
+  const logger = createLogger({ name: 'fake-services', level: 'info' });
 
   // 1. Start Fake AI Server on port 8080
   const fakeAiPort = 8080;
@@ -39,39 +37,10 @@ async function main() {
     logger.info('Fixture Web Server running at http://127.0.0.1:8081');
   });
 
-  // 3. Start E2E Worker Runner connected to test-e2e.db
-  const dbPath = process.env.DATABASE_PATH || './test-e2e.db';
-  const db = createDatabase(dbPath);
-  migrateDatabase(db, { embeddingModel: 'text-embedding-3-small', embeddingDimensions: 1536 });
-  const repo = new Repository(db);
-
-  const aiClient = new OpenAIClient({
-    baseURL: fakeAi.baseUrl,
-    apiKey: 'test-fake-key',
-    embeddingModel: 'text-embedding-3-small',
-    embeddingDimensions: 1536,
-    chatModel: 'gpt-4o-mini',
-    logger,
-  });
-
-  const workerRunner = new WorkerRunner({
-    workerId: 'wrk_e2e_fixture',
-    repository: repo,
-    embeddingProvider: aiClient,
-    logger,
-    allowLocalhostInTests: true,
-  });
-
-  workerRunner.start().catch((err) => {
-    logger.error({ err }, 'E2E Worker runner error');
-  });
-
   const cleanup = async () => {
-    logger.info('Shutting down test fixture servers and worker...');
-    workerRunner.stop();
+    logger.info('Shutting down fake services...');
     await fakeAi.close();
     fixtureServer.close();
-    db.$client.close();
     process.exit(0);
   };
 
@@ -80,6 +49,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Failed to start test fixture services:', err);
+  console.error('Failed to start fake services:', err);
   process.exit(1);
 });

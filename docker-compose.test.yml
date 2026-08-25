@@ -4,11 +4,17 @@ services:
   fake-services:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.test
     command: npx tsx tests/fixtures/startTestServices.ts
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/fixture-article.html').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 2s
 
   api:
     build:
@@ -28,10 +34,18 @@ services:
       - EMBEDDING_DIMENSIONS=1536
       - CHAT_MODEL=gpt-4o-mini
       - MIN_RELEVANCE_SCORE=0.0
+      - TEST_ALLOWED_HOSTS=fake-services,localhost,127.0.0.1
     volumes:
       - knowledge-test-data:/data
     depends_on:
-      - fake-services
+      fake-services:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 2s
 
   worker:
     build:
@@ -47,11 +61,12 @@ services:
       - EMBEDDING_MODEL=text-embedding-3-small
       - EMBEDDING_DIMENSIONS=1536
       - CHAT_MODEL=gpt-4o-mini
+      - TEST_ALLOWED_HOSTS=fake-services,localhost,127.0.0.1
     volumes:
       - knowledge-test-data:/data
     depends_on:
-      - fake-services
-      - api
+      fake-services:
+        condition: service_healthy
 
 volumes:
   knowledge-test-data:

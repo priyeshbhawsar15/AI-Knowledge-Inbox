@@ -10,11 +10,12 @@ export interface FetchedDocument {
 }
 
 export interface FetchOptions {
-  allowLocalhostInTests?: boolean;
-  maxRedirects?: number;
-  overallTimeoutMs?: number;
-  connectTimeoutMs?: number;
-  bodyCapBytes?: number;
+  allowLocalhostInTests?: boolean | undefined;
+  allowlistedHosts?: string[] | undefined;
+  maxRedirects?: number | undefined;
+  overallTimeoutMs?: number | undefined;
+  connectTimeoutMs?: number | undefined;
+  bodyCapBytes?: number | undefined;
 }
 
 export async function fetchPublicDocument(
@@ -36,9 +37,10 @@ export async function fetchPublicDocument(
     while (redirectCount <= maxRedirects) {
       const dest = await validateUrlAndResolveIp(
         currentUrl,
-        options?.allowLocalhostInTests !== undefined
-          ? { allowLocalhostInTests: options.allowLocalhostInTests }
-          : {}
+        {
+          allowLocalhostInTests: options?.allowLocalhostInTests,
+          allowlistedHosts: options?.allowlistedHosts,
+        }
       );
 
       // Create undici Agent pinning connection to validated IP with 10s connect/headers budget

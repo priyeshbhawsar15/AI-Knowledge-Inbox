@@ -14,8 +14,9 @@ export interface WorkerRunnerOptions {
   repository: Repository;
   embeddingProvider: EmbeddingProvider;
   logger: Logger;
-  pollIntervalMs?: number;
-  allowLocalhostInTests?: boolean;
+  pollIntervalMs?: number | undefined;
+  allowLocalhostInTests?: boolean | undefined;
+  allowlistedHosts?: string[] | undefined;
 }
 
 export class WorkerRunner {
@@ -100,12 +101,10 @@ export class WorkerRunner {
         if (!item.sourceUrl) {
           throw new Error('VALIDATION_ERROR: URL item missing sourceUrl');
         }
-        const doc = await fetchPublicDocument(
-          item.sourceUrl,
-          this.options.allowLocalhostInTests !== undefined
-            ? { allowLocalhostInTests: this.options.allowLocalhostInTests }
-            : {}
-        );
+        const doc = await fetchPublicDocument(item.sourceUrl, {
+          allowLocalhostInTests: this.options.allowLocalhostInTests,
+          allowlistedHosts: this.options.allowlistedHosts,
+        });
         const extracted = extractTextFromHtml(doc.bodyText, doc.contentType, doc.finalUrl);
         rawContent = extracted.text;
         title = extracted.title ?? doc.finalUrl;

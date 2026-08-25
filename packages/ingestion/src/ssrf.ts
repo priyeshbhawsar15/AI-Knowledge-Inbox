@@ -6,6 +6,11 @@ export interface ValidatedDestination {
   resolvedIp: string;
 }
 
+export interface SSRFValidationOptions {
+  allowLocalhostInTests?: boolean | undefined;
+  allowlistedHosts?: string[] | undefined;
+}
+
 export function isPrivateOrReservedIp(ip: string): boolean {
   if (!ip) return true;
 
@@ -67,7 +72,7 @@ export function isPrivateOrReservedIp(ip: string): boolean {
 
 export async function validateUrlAndResolveIp(
   urlStr: string,
-  options?: { allowLocalhostInTests?: boolean }
+  options?: SSRFValidationOptions
 ): Promise<ValidatedDestination> {
   let url: URL;
   try {
@@ -84,16 +89,35 @@ export async function validateUrlAndResolveIp(
     throw new Error('URL_POLICY_VIOLATION: Credentials in URL are forbidden');
   }
 
-  const isTestMode = options?.allowLocalhostInTests === true && process.env.NODE_ENV === 'test';
+  // Build exact test-only allowlist, ONLY active if NODE_ENV === 'test'
+  const isNodeEnvTest = process.env.NODE_ENV === 'test';
+  const allowedHostsSet = new Set<string>();
 
-  const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
-  // Standard ports allowed unless test mode explicitly overrides
-  if (!isTestMode && port !== 80 && port !== 443) {
-    throw new Error(`URL_POLICY_VIOLATION: Non-standard port ${port} is forbidden`);
+  if (isNodeEnvTest) {
+    if (options?.allowlistedHosts && options.allowlistedHosts.length > 0) {
+      for (const h of options.allowlistedHosts) {
+        allowedHostsSet.add(h.trim().toLowerCase());
+      }
+    } else if (process.env.TEST_ALLOWED_HOSTS) {
+      for (const h of process.env.TEST_ALLOWED_HOSTS.split(',')) {
+        if (h.trim()) allowedHostsSet.add(h.trim().toLowerCase());
+      }
+    } else if (options?.allowLocalhostInTests) {
+      allowedHostsSet.add('localhost');
+      allowedHostsSet.add('127.0.0.1');
+      allowedHostsSet.add('fake-services');
+    }
   }
 
   const hostname = url.hostname.toLowerCase();
-  if (!isTestMode) {
+  const isHostAllowlisted = isNodeEnvTest && allowedHostsSet.has(hostname);
+
+  const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
+  if (!isHostAllowlisted && port !== 80 && port !== 443) {
+    throw new Error(`URL_POLICY_VIOLATION: Non-standard port ${port} is forbidden`);
+  }
+
+  if (!isHostAllowlisted) {
     if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
       throw new Error('URL_PRIVATE_ADDRESS: Localhost target forbidden');
     }
@@ -102,7 +126,7 @@ export async function validateUrlAndResolveIp(
   let resolvedIp: string;
   if (isIP(hostname)) {
     resolvedIp = hostname;
-    if (!isTestMode && isPrivateOrReservedIp(resolvedIp)) {
+    if (!isHostAllowlisted && isPrivateOrReservedIp(resolvedIp)) {
       throw new Error(`URL_PRIVATE_ADDRESS: Destination IP ${resolvedIp} is in a private/reserved range`);
     }
   } else {
@@ -112,9 +136,8 @@ export async function validateUrlAndResolveIp(
         throw new Error('URL_FETCH_FAILED: DNS resolution failed');
       }
 
-      // Validate EVERY resolved address
       for (const addr of addresses) {
-        if (!isTestMode && isPrivateOrReservedIp(addr.address)) {
+        if (!isHostAllowlisted && isPrivateOrReservedIp(addr.address)) {
           throw new Error(`URL_PRIVATE_ADDRESS: Destination IP ${addr.address} is in a private/reserved range`);
         }
       }

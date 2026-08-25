@@ -13,7 +13,7 @@ describe('SSRF Protection & Address Validation', () => {
     expect(isPrivateOrReservedIp('93.184.216.34')).toBe(false);
   });
 
-  it('blocks loopback, private IPs, and localhost destinations', async () => {
+  it('blocks loopback, private IPs, and localhost destinations by default', async () => {
     await expect(validateUrlAndResolveIp('http://127.0.0.1')).rejects.toThrow(/URL_PRIVATE_ADDRESS/);
     await expect(validateUrlAndResolveIp('http://10.0.0.1')).rejects.toThrow(/URL_PRIVATE_ADDRESS/);
     await expect(validateUrlAndResolveIp('http://169.254.169.254')).rejects.toThrow(/URL_PRIVATE_ADDRESS/);
@@ -28,12 +28,32 @@ describe('SSRF Protection & Address Validation', () => {
     await expect(validateUrlAndResolveIp('http://example.com:8080')).rejects.toThrow(/Non-standard port/);
   });
 
-  it('requires NODE_ENV=test for test bypass option', async () => {
+  it('allows exact allowlisted host in NODE_ENV=test while blocking non-allowlisted private hosts', async () => {
+    const originalEnv = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = 'test';
+      const result = await validateUrlAndResolveIp('http://127.0.0.1:8081/fixture-article.html', {
+        allowlistedHosts: ['127.0.0.1'],
+      });
+      expect(result.resolvedIp).toBe('127.0.0.1');
+
+      // Non-allowlisted private target must remain blocked in test mode
+      await expect(
+        validateUrlAndResolveIp('http://10.0.0.1:8081/secret', {
+          allowlistedHosts: ['127.0.0.1'],
+        })
+      ).rejects.toThrow(/URL_POLICY_VIOLATION: Non-standard port/);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('requires NODE_ENV=test for test allowlist option', async () => {
     const originalEnv = process.env.NODE_ENV;
     try {
       process.env.NODE_ENV = 'production';
       await expect(
-        validateUrlAndResolveIp('http://127.0.0.1:3000', { allowLocalhostInTests: true })
+        validateUrlAndResolveIp('http://127.0.0.1:3000', { allowLocalhostInTests: true, allowlistedHosts: ['127.0.0.1'] })
       ).rejects.toThrow(/URL_POLICY_VIOLATION: Non-standard port/);
     } finally {
       process.env.NODE_ENV = originalEnv;

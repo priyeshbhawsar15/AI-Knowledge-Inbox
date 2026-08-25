@@ -14,17 +14,18 @@
   "scripts": {
     "dev": "tsx watch apps/api/src/index.ts",
     "build": "npm run build --workspaces --if-present",
+    "start": "node apps/api/dist/index.js",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,html,css}\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,html,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,html,css}\"",
     "test": "vitest run",
     "test:unit": "vitest run --selectProjects unit",
     "test:integration": "vitest run --selectProjects integration",
-    "test:e2e": "playwright test",
-    "db:migrate": "npm run db:migrate --workspace=@ai-knowledge-inbox/db",
-    "start": "node apps/api/dist/index.js"
+    "test:compose": "tsx scripts/test-compose-pipeline.ts",
+    "test:e2e": "npm run test:compose && playwright test",
+    "db:migrate": "npm run db:migrate --workspace=@ai-knowledge-inbox/db"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
@@ -51,9 +52,9 @@
   },
   "allowScripts": {
     "better-sqlite3@11.10.0": true,
-    "esbuild@0.25.12": true,
     "esbuild@0.18.20": true,
     "esbuild@0.19.12": true,
+    "esbuild@0.25.12": true,
     "esbuild@0.28.2": true
   }
 }
