@@ -12,7 +12,7 @@ parent: "[[20 Projects/AI Knowledge Inbox/Project]]"
 
 # AI Knowledge Inbox — Detailed Implementation Plan
 
-> **Coding-agent execution contract:** This plan implements Priyesh's approved system design in the canonical Gaming PC repository `/home/priyesh/Work/ai-knowledge-box`. Follow phases in order, keep each phase independently verifiable, and do not invent requirements that conflict with the indexed specifications. Implementation is authorized; public deployment, Caddy wiring, authentication, and merging into another branch are not.
+> **Coding-agent execution contract:** This plan implements Priyesh's approved system design in the canonical Gaming PC repository the project repository. Follow phases in order, keep each phase independently verifiable, and do not invent requirements that conflict with the indexed specifications. Implementation is authorized; public deployment, Caddy wiring, authentication, and merging into another branch are not.
 
 ## 0. Reference Specifications & Document Index
 
@@ -36,7 +36,7 @@ The repository must contain every source below before implementation begins. The
 
 ### Authorized
 
-- Implement the full application in `/home/priyesh/Work/ai-knowledge-box` on the Gaming PC `pb-desk`.
+- Implement the full application on the Gaming PC.
 - Create and work on branch `implementation/ai-knowledge-inbox`; do not merge it.
 - Install repository-scoped npm dependencies and Playwright's repository browser if needed.
 - Create SQLite databases only under repository test/artifact directories or Docker volumes.
@@ -57,8 +57,8 @@ The repository must contain every source below before implementation begins. The
 
 ### Environment facts
 
-- Host: `pb-desk`, user `priyesh`.
-- Repository: `/home/priyesh/Work/ai-knowledge-box`; currently an empty Git repository with an unborn `master` branch.
+- Host: the Gaming PC.
+- Repository: currently an empty Git repository with an unborn `master` branch.
 - Runtime: Node `22.23.2`, npm `12.0.2`, Docker Engine `29.7.2`, Docker Compose `5.5.0`.
 - Browser tooling: system Chromium and Playwright CLI are available.
 - Package manager: use npm workspaces because npm is installed and Corepack/pnpm are not. Pin the package manager in `package.json`; do not globally install a package manager.

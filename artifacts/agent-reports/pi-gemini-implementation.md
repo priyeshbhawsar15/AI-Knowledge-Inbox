@@ -3,8 +3,7 @@
 ## Executive & Environment Details
 
 - **Model Route:** `omni/antigravity/gemini-3.6-flash-high` (Pi Harness)
-- **Host:** `pb-desk` (`Linux 6.13.5-zen1-1-zen`)
-- **Repository Path:** `/home/priyesh/Work/ai-knowledge-box`
+- **Host:** `Linux 6.13.5-zen1-1-zen`
 - **Git Branch:** `implementation/ai-knowledge-inbox` (unmerged, unpushed)
 - **Node Version:** `v22.23.2`
 - **npm Version:** `12.0.2`
