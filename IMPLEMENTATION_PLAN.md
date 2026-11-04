@@ -12,7 +12,7 @@ parent: "[[20 Projects/AI Knowledge Inbox/Project]]"
 
 # AI Knowledge Inbox — Detailed Implementation Plan
 
-> **Coding-agent execution contract:** This plan implements Priyesh's approved system design in the canonical Gaming PC repository the project repository. Follow phases in order, keep each phase independently verifiable, and do not invent requirements that conflict with the indexed specifications. Implementation is authorized; public deployment, Caddy wiring, authentication, and merging into another branch are not.
+> **Coding-agent execution contract:** This plan implements Priyesh's approved system design in the canonical Gaming PC repository. Follow phases in order, keep each phase independently verifiable, and do not invent requirements that conflict with the indexed specifications. Implementation is authorized; public deployment, Caddy wiring, authentication, and merging into another branch are not.
 
 ## 0. Reference Specifications & Document Index
 
